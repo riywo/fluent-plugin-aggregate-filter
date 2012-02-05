@@ -14,3 +14,4 @@ group :development do
 end
 
 #gem "fluentd", :path => 'vendor/fluentd' if RUBY_VERSION >= "1.9.2"
+gem "fluentd"

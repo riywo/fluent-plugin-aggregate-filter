@@ -1,17 +1,17 @@
 require 'helper'
 # require 'time'
 
-class AggregationFilterTest < Test::Unit::TestCase
-  TMP_DIR = File.dirname(__FILE__) + "/../tmp"
+class AggregateFilterTest < Test::Unit::TestCase
+#  TMP_DIR = File.dirname(__FILE__) + "/../tmp"
 
   def setup
     Fluent::Test.setup
-    FileUtils.rm_rf(TMP_DIR)
-    FileUtils.mkdir_p(TMP_DIR)
+#    FileUtils.rm_rf(TMP_DIR)
+#    FileUtils.mkdir_p(TMP_DIR)
   end
 
   CONFIG = %[
-    buffer_path #{TMP_DIR}/buffer
+    utc
   ]
   # CONFIG = %[
   #   path #{TMP_DIR}/out_file_test
@@ -20,7 +20,7 @@ class AggregationFilterTest < Test::Unit::TestCase
   # ]
 
   def create_driver(conf = CONFIG)
-    Fluent::Test::TimeSlicedOutputTestDriver.new(Fluent::AggregationFilter).configure(conf)
+    Fluent::Test::TimeSlicedOutputTestDriver.new(Fluent::AggregateFilter).configure(conf)
   end
 
   def test_configure
@@ -34,17 +34,19 @@ class AggregationFilterTest < Test::Unit::TestCase
     # assert_equal :gz, d.instance.compress
   end
 
-  def test_format
+  def test_emit
     d = create_driver
 
-    # time = Time.parse("2011-01-02 13:14:15 UTC").to_i
-    # d.emit({"a"=>1}, time)
-    # d.emit({"a"=>2}, time)
+    time = Time.parse("2011-01-02 13:14:00 UTC").to_i
+    d.emit({"a"=>1}, time)
+    d.emit({"a"=>2}, time+1)
+    d.emit({"a"=>3.0}, time+2)
+    d.run
 
-    # d.expect_format %[2011-01-02T13:14:15Z\ttest\t{"a":1}\n]
-    # d.expect_format %[2011-01-02T13:14:15Z\ttest\t{"a":2}\n]
+    emits = d.emits
+    assert_equal 1, emits.length
+    assert_equal ["test", time, {"a_num"=>3, "a_sum"=>6.0, "a_min"=>1, "a_max"=>3.0, "a_avg"=>2.0, "a_95pct"=>2}], emits[0]
 
-    # d.run
   end
 
   def test_write

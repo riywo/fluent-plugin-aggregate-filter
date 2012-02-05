@@ -12,9 +12,10 @@ class AggregateFilter < TimeSlicedOutput
   config_set_default :buffer_type, 'memory'
   config_set_default :flush_interval, 1
   config_set_default :time_slice_format, '%Y-%m-%dT%H:%M:00'
-  config_set_default :time_slice_wait, 1
+  config_set_default :time_slice_wait, 2
 
-  # config_param :hoge, :string, :default => 'hoge'
+  config_param :add_prefix, :string, :default => 'aggregated'
+  config_param :percentile, :integer, :default => 95
 
   def initialize
     super
@@ -23,7 +24,6 @@ class AggregateFilter < TimeSlicedOutput
 
   def configure(conf)
     super
-    # @path = conf['path']
   end
 
   def start
@@ -46,35 +46,37 @@ class AggregateFilter < TimeSlicedOutput
     else
       key_time = Time.parse(chunk.key+' UTC').to_i
     end
-    key_tag = nil
 
     aggregate = {}
     chunk.msgpack_each { |tag, time, record|
-      key_tag = tag # same tag only...
       record.each_pair { |column, value|
-        if aggregate[column] == nil
-          aggregate[column] = [value]
+        aggregate[tag] = {} if aggregate[tag] == nil
+        if aggregate[tag][column] == nil
+          aggregate[tag][column] = [value]
         else
-          aggregate[column].push(value)
+          aggregate[tag][column].push(value)
         end
       }
     }
-    key_tag = 'aggregated.' + key_tag
 
-    record = {}
-    aggregate.each_pair { |column, list|
-      list.sort!
-      record[column+'_num'] = list.length
-      record[column+'_min'] = list.first
-      record[column+'_max'] = list.last
-      th = (list.length * 0.95).truncate
-      record[column+'_95pct'] = list[th-1]
-      record[column+'_sum'] = list.inject(0){|sum, i| sum + i }
-      record[column+'_avg'] = record[column+'_sum'] / record[column+'_num']
+    aggregate.each_pair { |tag, hash|
+      tag = @add_prefix + '.' + tag
+      record = {}
+      hash.each_pair { |column, list|
+        stat = {}
+        list.sort!
+        stat['num'] = list.length
+        stat['min'] = list.first
+        stat['max'] = list.last
+        th = (stat['num'] * @percentile / 100).truncate
+        stat['pct' + @percentile.to_s] = list[th-1]
+        stat['sum'] = list.inject(0.0){|sum, i| sum + i }
+        stat['avg'] = stat['sum'] / stat['num']
+        stat['var'] = list.inject(0.0){|sum, i| sum + (i-stat['avg'])**2.to_f } / stat['num']
+        record[column] = stat
+      }
+      Engine.emit(tag, key_time, record)
     }
-
-    Engine.emit(key_tag, key_time, record)
-#    puts [key_tag, key_time, record].to_json
   end
 end
 

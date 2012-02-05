@@ -25,27 +25,42 @@ class AggregateFilterTest < Test::Unit::TestCase
 
   def test_configure
     #### set configurations
-    # d = create_driver %[
-    #   path test_path
-    #   compress gz
-    # ]
+    d = create_driver %[
+      add_prefix agg_test
+      percentile 90
+    ]
     #### check configurations
-    # assert_equal 'test_path', d.instance.path
-    # assert_equal :gz, d.instance.compress
+    assert_equal 'agg_test', d.instance.add_prefix
+    assert_equal 90, d.instance.percentile
   end
 
   def test_emit
     d = create_driver
 
+    list = [27, 41, 78, 60, 29, 12, 33, 37, 15, 29, 14, 14, 65, 48, 30, 48, 44, 74, 71, 36]
+    sort_list = list.sort
+    num = sort_list.length
+    sum = sort_list.inject(0.0){|sum, i| sum + i.to_f }
+    avg = sum / num
+    min = sort_list.first
+    max = sort_list.last
+    pct95 = sort_list[(num * 0.95).truncate - 1]
+    var = sort_list.inject(0.0){|sum, i| sum + (i-avg)**2.to_f } / num
+
     time = Time.parse("2011-01-02 13:14:00 UTC").to_i
-    d.emit({"a"=>1}, time)
-    d.emit({"a"=>2}, time+1)
-    d.emit({"a"=>3.0}, time+2)
+    i = 0
+    list.each {|value|
+      d.emit({"a"=>value}, time + i)
+      i += 1
+    }
     d.run
 
     emits = d.emits
     assert_equal 1, emits.length
-    assert_equal ["aggregated.test", time, {"a_num"=>3, "a_sum"=>6.0, "a_min"=>1, "a_max"=>3.0, "a_avg"=>2.0, "a_95pct"=>2}], emits[0]
+    assert_equal ["aggregated.test", time,
+#      {"a_num"=>num, "a_sum"=>sum, "a_min"=>min, "a_max"=>max, "a_avg"=>avg, "a_pct95"=>pct95, "a_var"=>var}
+      {"a" => {"num"=>num, "sum"=>sum, "min"=>min, "max"=>max, "avg"=>avg, "pct95"=>pct95, "var"=>var}}
+    ], emits[0]
 
   end
 

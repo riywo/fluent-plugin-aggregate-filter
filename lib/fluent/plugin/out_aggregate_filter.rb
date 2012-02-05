@@ -1,5 +1,5 @@
-class Fluent::AggregationFilter < Fluent::TimeSlicedOutput
-  Fluent::Plugin.register_output('aggregation_filter', self)
+class Fluent::AggregateFilter < Fluent::TimeSlicedOutput
+  Fluent::Plugin.register_output('aggregate_filter', self)
 
   include Fluent::SetTagKeyMixin
   config_set_default :include_tag_key, false

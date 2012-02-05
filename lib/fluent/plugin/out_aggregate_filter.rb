@@ -11,7 +11,7 @@ class AggregateFilter < TimeSlicedOutput
 
   config_set_default :buffer_type, 'memory'
   config_set_default :flush_interval, 1
-  config_set_default :time_slice_format, '%Y%m%d-%H%M'
+  config_set_default :time_slice_format, '%Y-%m-%dT%H:%M:00'
   config_set_default :time_slice_wait, 1
 
   # config_param :hoge, :string, :default => 'hoge'
@@ -74,7 +74,7 @@ class AggregateFilter < TimeSlicedOutput
     }
 
     Engine.emit(key_tag, key_time, record)
-    puts [key_tag, Time.at(key_time), record].to_json
+#    puts [key_tag, key_time, record].to_json
   end
 end
 

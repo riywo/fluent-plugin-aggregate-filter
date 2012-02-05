@@ -45,7 +45,7 @@ class AggregateFilterTest < Test::Unit::TestCase
 
     emits = d.emits
     assert_equal 1, emits.length
-    assert_equal ["test", time, {"a_num"=>3, "a_sum"=>6.0, "a_min"=>1, "a_max"=>3.0, "a_avg"=>2.0, "a_95pct"=>2}], emits[0]
+    assert_equal ["aggregated.test", time, {"a_num"=>3, "a_sum"=>6.0, "a_min"=>1, "a_max"=>3.0, "a_avg"=>2.0, "a_95pct"=>2}], emits[0]
 
   end
 

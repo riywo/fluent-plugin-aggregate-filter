@@ -10,8 +10,9 @@ class AggregateFilter < TimeSlicedOutput
 #  config_set_default :include_time_key, true
 
   config_set_default :buffer_type, 'memory'
+  config_set_default :flush_interval, 1
   config_set_default :time_slice_format, '%Y%m%d-%H%M'
-  config_set_default :time_slice_wait, '1s'
+  config_set_default :time_slice_wait, 1
 
   # config_param :hoge, :string, :default => 'hoge'
 
@@ -40,7 +41,11 @@ class AggregateFilter < TimeSlicedOutput
   end
 
   def write(chunk)
-    key_time = Time.parse(chunk.key).to_i
+    if @localtime
+      key_time = Time.parse(chunk.key).to_i
+    else
+      key_time = Time.parse(chunk.key+' UTC').to_i
+    end
     key_tag = nil
 
     aggregate = {}
@@ -54,6 +59,7 @@ class AggregateFilter < TimeSlicedOutput
         end
       }
     }
+    key_tag = 'aggregated.' + key_tag
 
     record = {}
     aggregate.each_pair { |column, list|
@@ -68,6 +74,7 @@ class AggregateFilter < TimeSlicedOutput
     }
 
     Engine.emit(key_tag, key_time, record)
+    puts [key_tag, Time.at(key_time), record].to_json
   end
 end
 

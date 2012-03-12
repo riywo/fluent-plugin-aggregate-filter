@@ -10,7 +10,7 @@ class AggregateFilter < TimeSlicedOutput
 #  config_set_default :include_time_key, true
 
   config_set_default :buffer_type, 'memory'
-  config_set_default :flush_interval, 1
+#  config_set_default :flush_interval, 1
   config_set_default :time_slice_format, '%Y-%m-%dT%H:%M:00'
   config_set_default :time_slice_wait, 2
 
@@ -64,6 +64,7 @@ class AggregateFilter < TimeSlicedOutput
       record = {}
       hash.each_pair { |column, list|
         stat = {}
+        list.map! {|x| x.to_i}
         list.sort!
         stat['num'] = list.length
         stat['min'] = list.first
